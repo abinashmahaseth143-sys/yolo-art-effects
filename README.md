@@ -19,6 +19,10 @@ An intelligent system that transforms artworks by applying dynamic visual effect
 - 4GB+ RAM
 - Webcam (optional, for live processing)
 
+
+You can download zip from github then unzip it 
+Open vs code and open folder you unzip then open terminal
+
 ### Installation
 
 1. **Clone/Download** the project:
@@ -31,9 +35,6 @@ python -m venv venv
 
 # Activate (Windows)
 venv\Scripts\activate
-
-venv\Scripts\activate
-
 
 Install dependencies:
 pip install -r requirements.txt
