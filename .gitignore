@@ -1,0 +1,4 @@
+venv/ 
+yolov8n.pt 
+outputs/ 
+gradio_cached_examples/ 
