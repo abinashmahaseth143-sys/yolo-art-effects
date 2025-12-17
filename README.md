@@ -23,11 +23,15 @@ An intelligent system that transforms artworks by applying dynamic visual effect
 
 1. **Clone/Download** the project:
    ```bash
-   git clone https://github.com/yourusername/yolo_art_effects.git
+   git clone https://github.com/abinashmahaseth143-sys/yolo-art-effects.git
    cd yolo_art_effects
  
 Create virtual environment (Windows):
-   python -m venv venv
+python -m venv venv
+
+# Activate (Windows)
+venv\Scripts\activate
+
 venv\Scripts\activate
 
 
@@ -37,4 +41,4 @@ pip install -r requirements.txt
 Running the Application
 python -m src.cli.main web --port 7862
 
-"# yolo-arts-effects" 
+
