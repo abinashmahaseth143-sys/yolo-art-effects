@@ -241,32 +241,317 @@ def create_interface():
                     outputs=[animation_effect]
                 )
             
-            # Tab 2: Webcam Processing
-            with gr.TabItem("📷 Webcam"):
+                                                                         # Tab 2: REAL-TIME Camera - Detects EVERYTHING
+            with gr.TabItem("📷 LIVE Camera"):
+                gr.Markdown("### 🔴 LIVE: Detecting EVERYTHING Camera Sees")
+                gr.Markdown("Point camera at ANYTHING - detection updates instantly!")
+                
                 with gr.Row():
                     with gr.Column():
-                        webcam_input = gr.Image(
-                            label="Upload Photo (from camera or file)",
+                        # Live webcam feed
+                        webcam_feed = gr.Image(
+                            sources=["webcam"],  # REAL camera
+                            label="🔴 LIVE CAMERA FEED",
                             type="pil",
-                            height=300
+                            height=350,
+                            streaming=True,  # Critical for real-time
+                            interactive=True,
+                            show_download_button=False
                         )
-                        webcam_btn = gr.Button("🎥 Process Image", variant="primary")
+                        
+                        with gr.Accordion("⚙️ LIVE DETECTION SETTINGS", open=True):
+                            detect_sensitivity = gr.Slider(
+                                0.01, 0.5, value=0.1,  # Very low for detecting everything
+                                label="DETECTION SENSITIVITY",
+                                info="0.01 = Detect EVERYTHING | 0.5 = Only confident objects"
+                            )
+                            
+                            show_bounding_boxes = gr.Checkbox(
+                                True,
+                                label="SHOW BOUNDING BOXES",
+                                info="Draw boxes around detected objects"
+                            )
+                            
+                            auto_process = gr.Checkbox(
+                                True,
+                                label="AUTO-DETECT",
+                                info="Detect objects automatically (real-time)"
+                            )
+                        
+                        # Status display
+                        live_status = gr.Textbox(
+                            label="LIVE STATUS",
+                            value="🟡 READY: Click camera icon (📷) to start",
+                            interactive=False
+                        )
                     
                     with gr.Column():
-                        webcam_output = gr.Image(
-                            label="Processed Result",
-                            height=300
+                        # Processed output with detection
+                        processed_output = gr.Image(
+                            label="🔴 LIVE DETECTION RESULTS",
+                            height=350,
+                            show_download_button=True
                         )
-                        webcam_info = gr.Textbox(
-                            label="Detection Info"
-                        )
+                        
+                        # Detection results in TABLE FORMAT
+                        detection_table = gr.HTML("""
+                        <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto;">
+                            <h3 style="margin: 0 0 15px 0;">🎯 DETECTED OBJECTS</h3>
+                            <div id="detection-results">
+                                <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px;">
+                                    <thead>
+                                        <tr style="background: #4CAF50; color: white;">
+                                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Object</th>
+                                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Category</th>
+                                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Confidence</th>
+                                            <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Size</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-body">
+                                        <tr>
+                                            <td colspan="4" style="padding: 20px; text-align: center; color: #666;">
+                                                Waiting for camera...
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        """)
+                        
+                        # Summary stats
+                        detection_summary = gr.HTML("""
+                        <div style="margin-top: 10px; padding: 15px; background: #e3f2fd; border-radius: 8px;">
+                            <h4 style="margin: 0 0 10px 0;">📊 DETECTION SUMMARY</h4>
+                            <div style="display: flex; justify-content: space-between;">
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">TOTAL OBJECTS</p>
+                                    <h2 id="total-count" style="margin: 0; color: #4CAF50;">0</h2>
+                                </div>
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">UNIQUE TYPES</p>
+                                    <h2 id="unique-count" style="margin: 0; color: #2196F3;">0</h2>
+                                </div>
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">AVG CONFIDENCE</p>
+                                    <h2 id="avg-confidence" style="margin: 0; color: #FF9800;">0.00</h2>
+                                </div>
+                            </div>
+                        </div>
+                        """)
                 
-                webcam_btn.click(
-                    fn=app.process_webcam,
-                    inputs=[webcam_input],
-                    outputs=[webcam_output, webcam_info]
+                def process_live_camera(image, sensitivity, show_boxes, auto_detect):
+                    """REAL-TIME: Detect EVERYTHING camera sees - Returns HTML table"""
+                    if image is None or not auto_detect:
+                        # Return empty table when no detection
+                        empty_table = """
+                        <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px;">
+                            <thead>
+                                <tr style="background: #4CAF50; color: white;">
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Object</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Category</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Confidence</th>
+                                    <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Size</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="padding: 20px; text-align: center; color: #666;">
+                                        Camera off or auto-detect disabled
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        """
+                        return None, empty_table, """
+                        <div style="display: flex; justify-content: space-between;">
+                            <div><p>TOTAL OBJECTS</p><h2>0</h2></div>
+                            <div><p>UNIQUE TYPES</p><h2>0</h2></div>
+                            <div><p>AVG CONFIDENCE</p><h2>0.00</h2></div>
+                        </div>
+                        """
+                    
+                    try:
+                        # Convert to OpenCV
+                        image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+                        
+                        # DETECT EVERYTHING with LOW confidence
+                        detections = app.detector.detect(
+                            image_cv, 
+                            confidence_threshold=sensitivity
+                        )
+                        
+                        # Create HTML table rows
+                        table_rows = ""
+                        total_confidence = 0
+                        unique_categories = set()
+                        
+                        if detections:
+                            # Sort by confidence (highest first)
+                            sorted_detections = sorted(detections, key=lambda x: x.confidence, reverse=True)
+                            
+                            for det in sorted_detections:
+                                # Calculate size percentage
+                                size_percent = det.area * 100
+                                
+                                # Color code by confidence
+                                row_color = "#d4edda" if det.confidence > 0.7 else "#fff3cd" if det.confidence > 0.4 else "#f8d7da"
+                                conf_color = "#28a745" if det.confidence > 0.7 else "#ffc107" if det.confidence > 0.4 else "#dc3545"
+                                
+                                table_rows += f"""
+                                <tr style="background: {row_color};">
+                                    <td style="padding: 8px; border: 1px solid #ddd; font-weight: bold;">{det.label}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">{det.category}</td>
+                                    <td style="padding: 8px; border: 1px solid #ddd; color: {conf_color}; font-weight: bold;">
+                                        {det.confidence:.2f}
+                                    </td>
+                                    <td style="padding: 8px; border: 1px solid #ddd;">{size_percent:.1f}%</td>
+                                </tr>
+                                """
+                                
+                                total_confidence += det.confidence
+                                unique_categories.add(det.category)
+                            
+                            # Create the complete table HTML
+                            table_html = f"""
+                            <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px;">
+                                <thead>
+                                    <tr style="background: #4CAF50; color: white;">
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Object</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Category</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Confidence</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {table_rows}
+                                </tbody>
+                            </table>
+                            """
+                            
+                            # Calculate statistics
+                            avg_confidence = total_confidence / len(detections) if detections else 0
+                            
+                            # Create summary HTML
+                            summary_html = f"""
+                            <div style="display: flex; justify-content: space-between;">
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">TOTAL OBJECTS</p>
+                                    <h2 style="margin: 0; color: #4CAF50;">{len(detections)}</h2>
+                                </div>
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">UNIQUE TYPES</p>
+                                    <h2 style="margin: 0; color: #2196F3;">{len(unique_categories)}</h2>
+                                </div>
+                                <div>
+                                    <p style="margin: 5px 0; font-size: 12px;">AVG CONFIDENCE</p>
+                                    <h2 style="margin: 0; color: #FF9800;">{avg_confidence:.2f}</h2>
+                                </div>
+                            </div>
+                            """
+                            
+                            # Apply visual effects
+                            processed = app.effect_manager.apply_effects(
+                                image_cv, detections, "category_based"
+                            )
+                            
+                            # Draw bounding boxes if enabled
+                            if show_boxes:
+                                for det in detections:
+                                    h, w = processed.shape[:2]
+                                    x1 = int(det.bbox[0] * w)
+                                    y1 = int(det.bbox[1] * h)
+                                    x2 = int(det.bbox[2] * w)
+                                    y2 = int(det.bbox[3] * h)
+                                    
+                                    # Draw box
+                                    cv2.rectangle(processed, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                                    
+                                    # Draw label
+                                    label = f"{det.label}: {det.confidence:.2f}"
+                                    cv2.putText(processed, label, (x1, y1-10),
+                                               cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                            
+                            # Add status overlay
+                            status_text = f"Objects: {len(detections)} | Unique: {len(unique_categories)}"
+                            cv2.putText(processed, status_text, (10, 30),
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+                            
+                        else:
+                            # No detections
+                            processed = image_cv
+                            table_html = """
+                            <table style="width: 100%; border-collapse: collapse; font-family: monospace; font-size: 14px;">
+                                <thead>
+                                    <tr style="background: #4CAF50; color: white;">
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Object</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Category</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Confidence</th>
+                                        <th style="padding: 8px; text-align: left; border: 1px solid #ddd;">Size</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td colspan="4" style="padding: 20px; text-align: center; color: #666;">
+                                            👀 No objects detected<br>
+                                            Try lowering sensitivity
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            """
+                            summary_html = """
+                            <div style="display: flex; justify-content: space-between;">
+                                <div><p>TOTAL OBJECTS</p><h2 style="color: #666;">0</h2></div>
+                                <div><p>UNIQUE TYPES</p><h2 style="color: #666;">0</h2></div>
+                                <div><p>AVG CONFIDENCE</p><h2 style="color: #666;">0.00</h2></div>
+                            </div>
+                            """
+                            
+                            # Add "searching" overlay
+                            cv2.putText(processed, "🔍 SEARCHING FOR OBJECTS", (50, 100),
+                                       cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 200, 0), 2)
+                        
+                        # Convert back to RGB
+                        processed_rgb = cv2.cvtColor(processed, cv2.COLOR_BGR2RGB)
+                        
+                        return processed_rgb, table_html, summary_html
+                        
+                    except Exception as e:
+                        error_table = f"""
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tbody>
+                                <tr>
+                                    <td colspan="4" style="padding: 20px; text-align: center; color: #f44336;">
+                                        ⚠️ Error: {str(e)[:50]}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        """
+                        return image, error_table, """
+                        <div style="display: flex; justify-content: space-between;">
+                            <div><p>TOTAL OBJECTS</p><h2 style="color: #f44336;">ERR</h2></div>
+                            <div><p>UNIQUE TYPES</p><h2 style="color: #f44336;">ERR</h2></div>
+                            <div><p>AVG CONFIDENCE</p><h2 style="color: #f44336;">ERR</h2></div>
+                        </div>
+                        """
+                
+                # REAL-TIME CONNECTION
+                webcam_feed.change(
+                    fn=process_live_camera,
+                    inputs=[webcam_feed, detect_sensitivity, show_bounding_boxes, auto_process],
+                    outputs=[processed_output, detection_table, detection_summary],
                 )
-            
+                
+                # Update status
+                def update_camera_status():
+                    return "🟢 LIVE: Camera active! Real-time detection running"
+                
+                webcam_feed.change(
+                    fn=update_camera_status,
+                    outputs=[live_status]
+                )
             # Tab 3: Batch Processing
             with gr.TabItem("📚 Batch Processing"):
                 with gr.Row():

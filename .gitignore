@@ -1,4 +1,10 @@
 venv/ 
+__pycache__/ 
+*.pyc 
+.env 
 yolov8n.pt 
-outputs/ 
 gradio_cached_examples/ 
+outputs/ 
+"*.log" 
+"*.tmp" 
+"*.temp" 

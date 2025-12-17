@@ -36,4 +36,4 @@ pip install -r requirements.txt
 
 Running the Application
 python -m src.cli.main web --port 7862
-"# yolo-art-effects" 
+
