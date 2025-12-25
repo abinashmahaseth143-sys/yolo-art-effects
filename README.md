@@ -46,4 +46,6 @@ python -m src.cli.main web --port 7862
 After running the application model will load sucessfully you need to click on link then gradio will open after gradio is open you can download image from browse all images and upload and for webcam you can just click on bottom it will open camera and detect and give results
 Running on local URL:  http://127.0.0.1:7862
 
+To exit type Ctrl+C
+
 
